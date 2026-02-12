@@ -1,0 +1,25 @@
+{
+  "users": [
+    {
+      "id": "user_01EXAMPLE",
+      "email": "brad@tower.dev",
+      "first_name": "Brad",
+      "last_name": "Heller",
+      "password": "abc123",
+      "email_verified": true,
+      "external_id": "tower_user_brad"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "org_01EXAMPLE",
+      "name": "brad@tower.dev"
+    }
+  ],
+  "memberships": [
+    {
+      "user_id": "user_01EXAMPLE",
+      "organization_id": "org_01EXAMPLE"
+    }
+  ]
+}
