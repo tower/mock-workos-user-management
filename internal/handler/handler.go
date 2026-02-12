@@ -27,6 +27,9 @@ func New(s *store.Store, iss *mockjwt.Issuer) http.Handler {
 	mux.HandleFunc("POST /user_management/organization_memberships", h.createOrganizationMembership)
 	mux.HandleFunc("GET /user_management/organization_memberships", h.listOrganizationMemberships)
 	mux.HandleFunc("POST /organizations", h.createOrganization)
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	return logRequests(mux)
 }
