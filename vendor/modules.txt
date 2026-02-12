@@ -1,0 +1,20 @@
+# github.com/google/go-querystring v1.0.0
+## explicit
+github.com/google/go-querystring/query
+# github.com/google/uuid v1.6.0
+## explicit
+github.com/google/uuid
+# github.com/workos/workos-go/v5 v5.2.0
+## explicit; go 1.13
+github.com/workos/workos-go/v5/internal/workos
+github.com/workos/workos-go/v5/pkg/common
+github.com/workos/workos-go/v5/pkg/mfa
+github.com/workos/workos-go/v5/pkg/organization_domains
+github.com/workos/workos-go/v5/pkg/organizations
+github.com/workos/workos-go/v5/pkg/roles
+github.com/workos/workos-go/v5/pkg/usermanagement
+github.com/workos/workos-go/v5/pkg/workos_errors
+# golang.org/x/crypto v0.48.0
+## explicit; go 1.24.0
+golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blowfish
