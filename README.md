@@ -68,3 +68,13 @@ IDs are optional. They'll be generated if omitted. Passwords are bcrypt-hashed a
 | `--signing-key` | `MOCK_WORKOS_SIGNING_KEY` | built-in dev key |
 
 State lives in memory and resets on restart.
+
+## Contributing
+
+We welcome contributions to the Tower CLI and runtime environment! Please see
+the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information.
+
+### Code of Conduct
+
+All contributions must abide by our code of conduct. Please see
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for more information.
