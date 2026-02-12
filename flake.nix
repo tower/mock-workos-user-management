@@ -14,7 +14,7 @@
       {
         packages.default = pkgs.buildGoModule {
           pname = "mock-workos-user-management";
-          version = "0.1.0";
+          version = builtins.replaceStrings ["\n"] [""] (builtins.readFile ./VERSION);
           src = ./.;
           vendorHash = null;
           subPackages = [ "cmd/mock-workos-user-management" ];
