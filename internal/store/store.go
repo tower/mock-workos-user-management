@@ -57,6 +57,7 @@ type Store struct {
 	usersByExtID map[string]string
 	orgs        map[string]*Organization
 	memberships map[string]*OrganizationMembership
+	authCodes   map[string]string // code → userID
 }
 
 func New() *Store {
@@ -66,6 +67,7 @@ func New() *Store {
 		usersByExtID: make(map[string]string),
 		orgs:         make(map[string]*Organization),
 		memberships:  make(map[string]*OrganizationMembership),
+		authCodes:    make(map[string]string),
 	}
 }
 
@@ -197,6 +199,31 @@ func (s *Store) UpdateUserLastSignIn(id string) {
 	if u, ok := s.users[id]; ok {
 		u.LastSignInAt = now()
 	}
+}
+
+func (s *Store) StoreAuthCode(code, userID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.authCodes[code] = userID
+}
+
+func (s *Store) ConsumeAuthCode(code string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	userID, ok := s.authCodes[code]
+	if ok {
+		delete(s.authCodes, code)
+	}
+	return userID, ok
+}
+
+func (s *Store) GetFirstUser() (*User, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, u := range s.users {
+		return u, true
+	}
+	return nil, false
 }
 
 func (s *Store) GetFirstMembershipOrgID(userID string) string {

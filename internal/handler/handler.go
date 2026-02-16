@@ -1,9 +1,13 @@
 package handler
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -23,6 +27,7 @@ func New(s *store.Store, iss *mockjwt.Issuer) http.Handler {
 	mux.HandleFunc("POST /user_management/users", h.createUser)
 	mux.HandleFunc("GET /user_management/users/external_id/{externalID}", h.getUserByExternalID)
 	mux.HandleFunc("GET /user_management/users/{id}", h.getUser)
+	mux.HandleFunc("GET /user_management/authorize", h.authorize)
 	mux.HandleFunc("POST /user_management/authenticate", h.authenticate)
 	mux.HandleFunc("POST /user_management/organization_memberships", h.createOrganizationMembership)
 	mux.HandleFunc("GET /user_management/organization_memberships", h.listOrganizationMemberships)
@@ -122,33 +127,104 @@ func (h *handler) getUserByExternalID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, u)
 }
 
+func (h *handler) authorize(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	redirectURI := q.Get("redirect_uri")
+	state := q.Get("state")
+	loginHint := q.Get("login_hint")
+
+	if redirectURI == "" {
+		writeError(w, http.StatusBadRequest, "bad_request", "redirect_uri is required")
+		return
+	}
+
+	var u *store.User
+	if loginHint != "" {
+		found, ok := h.store.GetUserByEmail(loginHint)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "bad_request", fmt.Sprintf("no user with email %q", loginHint))
+			return
+		}
+		u = found
+	} else {
+		found, ok := h.store.GetFirstUser()
+		if !ok {
+			writeError(w, http.StatusInternalServerError, "server_error", "no seeded users")
+			return
+		}
+		u = found
+	}
+
+	codeBytes := make([]byte, 16)
+	if _, err := rand.Read(codeBytes); err != nil {
+		writeError(w, http.StatusInternalServerError, "server_error", "failed to generate code")
+		return
+	}
+	code := hex.EncodeToString(codeBytes)
+	h.store.StoreAuthCode(code, u.ID)
+
+	redirect, err := url.Parse(redirectURI)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid redirect_uri")
+		return
+	}
+	rq := redirect.Query()
+	rq.Set("code", code)
+	if state != "" {
+		rq.Set("state", state)
+	}
+	redirect.RawQuery = rq.Encode()
+
+	http.Redirect(w, r, redirect.String(), http.StatusFound)
+}
+
 func (h *handler) authenticate(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 		Email        string `json:"email"`
 		Password     string `json:"password"`
+		Code         string `json:"code"`
 		GrantType    string `json:"grant_type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "invalid request body")
 		return
 	}
-	if req.GrantType != "password" {
-		writeError(w, http.StatusBadRequest, "bad_request", "unsupported grant_type")
-		return
-	}
 
-	u, ok := h.store.GetUserByEmail(req.Email)
-	if !ok {
-		writeError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid email or password.")
-		return
-	}
-	if u.PasswordHash != "" {
-		if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)); err != nil {
+	var u *store.User
+
+	switch req.GrantType {
+	case "password":
+		found, ok := h.store.GetUserByEmail(req.Email)
+		if !ok {
 			writeError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid email or password.")
 			return
 		}
+		if found.PasswordHash != "" {
+			if err := bcrypt.CompareHashAndPassword([]byte(found.PasswordHash), []byte(req.Password)); err != nil {
+				writeError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid email or password.")
+				return
+			}
+		}
+		u = found
+
+	case "authorization_code":
+		userID, ok := h.store.ConsumeAuthCode(req.Code)
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "invalid_grant", "Invalid or expired authorization code.")
+			return
+		}
+		found, ok := h.store.GetUser(userID)
+		if !ok {
+			writeError(w, http.StatusInternalServerError, "server_error", "user not found for code")
+			return
+		}
+		u = found
+
+	default:
+		writeError(w, http.StatusBadRequest, "bad_request", "unsupported grant_type")
+		return
 	}
 
 	orgID := h.store.GetFirstMembershipOrgID(u.ID)
@@ -171,7 +247,7 @@ func (h *handler) authenticate(w http.ResponseWriter, r *http.Request) {
 		OrganizationID:       orgID,
 		AccessToken:          accessToken,
 		RefreshToken:         "mock_refresh_" + u.ID,
-		AuthenticationMethod: "Password",
+		AuthenticationMethod: "OAuth",
 	})
 }
 
