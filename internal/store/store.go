@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -220,10 +221,15 @@ func (s *Store) ConsumeAuthCode(code string) (string, bool) {
 func (s *Store) GetFirstUser() (*User, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	for _, u := range s.users {
-		return u, true
+	if len(s.users) == 0 {
+		return nil, false
 	}
-	return nil, false
+	emails := make([]string, 0, len(s.usersByEmail))
+	for email := range s.usersByEmail {
+		emails = append(emails, email)
+	}
+	sort.Strings(emails)
+	return s.users[s.usersByEmail[emails[0]]], true
 }
 
 func (s *Store) GetFirstMembershipOrgID(userID string) string {
