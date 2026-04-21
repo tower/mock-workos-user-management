@@ -25,7 +25,7 @@ func (s *stringSlice) Set(v string) error {
 }
 
 func main() {
-	addr := flag.String("addr", envOr("MOCK_WORKOS_ADDR", ":8091"), "listen address")
+	addr := flag.String("addr", envOr("MOCK_WORKOS_ADDR", ":8092"), "listen address")
 	var seedPaths stringSlice
 	if v := envOr("MOCK_WORKOS_SEED", ""); v != "" {
 		seedPaths = append(seedPaths, v)

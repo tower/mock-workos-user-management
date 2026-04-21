@@ -9,7 +9,7 @@ cp seed.example.json seed.json  # add your test users, orgs, memberships
 go run ./cmd/mock-workos-user-management --seed seed.json
 ```
 
-Listens on `:8091` by default.
+Listens on `:8092` by default.
 
 ## Using with the WorkOS SDK
 
@@ -18,14 +18,14 @@ Set the `Endpoint` on the SDK clients to the mock server:
 ```go
 umClient := &usermanagement.Client{
     APIKey:     "anything",
-    Endpoint:   "http://localhost:8091",
+    Endpoint:   "http://localhost:8092",
     HTTPClient: http.DefaultClient,
     JSONEncode: json.Marshal,
 }
 
 orgClient := &organizations.Client{
     APIKey:     "anything",
-    Endpoint:   "http://localhost:8091",
+    Endpoint:   "http://localhost:8092",
     HTTPClient: http.DefaultClient,
     JSONEncode: json.Marshal,
 }
@@ -63,7 +63,7 @@ IDs are optional. They'll be generated if omitted. Passwords are bcrypt-hashed a
 
 | Flag | Env | Default |
 |---|---|---|
-| `--addr` | `MOCK_WORKOS_ADDR` | `:8091` |
+| `--addr` | `MOCK_WORKOS_ADDR` | `:8092` |
 | `--seed` | `MOCK_WORKOS_SEED` | (none) |
 | `--signing-key` | `MOCK_WORKOS_SIGNING_KEY` | built-in dev key |
 
