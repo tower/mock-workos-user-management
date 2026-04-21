@@ -51,20 +51,25 @@ func Load(path string, s *store.Store) error {
 	return Apply(cfg, s)
 }
 
-// LoadIfExists loads and applies a seed file, silently returning nil if the file does not exist.
-func LoadIfExists(path string, s *store.Store) error {
+// LoadIfExists loads and applies a seed file. The first return value reports
+// whether the file existed and was applied; if the file is absent it returns
+// (false, nil).
+func LoadIfExists(path string, s *store.Store) (bool, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return fmt.Errorf("reading seed file: %w", err)
+		return false, fmt.Errorf("reading seed file: %w", err)
 	}
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("parsing seed file: %w", err)
+		return false, fmt.Errorf("parsing seed file: %w", err)
 	}
-	return Apply(cfg, s)
+	if err := Apply(cfg, s); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func Apply(cfg Config, s *store.Store) error {

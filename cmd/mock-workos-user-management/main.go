@@ -38,10 +38,15 @@ func main() {
 	issuer := mockjwt.NewIssuer(*signingKey)
 
 	for _, path := range seedPaths {
-		if err := seed.LoadIfExists(path, s); err != nil {
+		loaded, err := seed.LoadIfExists(path, s)
+		if err != nil {
 			log.Fatalf("failed to load seed %s: %v", path, err)
 		}
-		log.Printf("loaded seed from %s", path)
+		if loaded {
+			log.Printf("loaded seed from %s", path)
+		} else {
+			log.Printf("seed file not found, skipping: %s", path)
+		}
 	}
 
 	h := handler.New(s, issuer)
