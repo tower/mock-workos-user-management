@@ -2,6 +2,7 @@ package seed
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -40,6 +41,22 @@ type SeedMembership struct {
 
 func Load(path string, s *store.Store) error {
 	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("reading seed file: %w", err)
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("parsing seed file: %w", err)
+	}
+	return Apply(cfg, s)
+}
+
+// LoadIfExists loads and applies a seed file, silently returning nil if the file does not exist.
+func LoadIfExists(path string, s *store.Store) error {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("reading seed file: %w", err)
 	}

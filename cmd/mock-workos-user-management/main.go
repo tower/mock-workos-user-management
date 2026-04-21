@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/tower/mock-workos-user-management/internal/handler"
@@ -15,20 +16,32 @@ import (
 	"github.com/tower/mock-workos-user-management/internal/store"
 )
 
+type stringSlice []string
+
+func (s *stringSlice) String() string  { return strings.Join(*s, ", ") }
+func (s *stringSlice) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
+
 func main() {
 	addr := flag.String("addr", envOr("MOCK_WORKOS_ADDR", ":8091"), "listen address")
-	seedPath := flag.String("seed", envOr("MOCK_WORKOS_SEED", ""), "path to seed JSON file")
+	var seedPaths stringSlice
+	if v := envOr("MOCK_WORKOS_SEED", ""); v != "" {
+		seedPaths = append(seedPaths, v)
+	}
+	flag.Var(&seedPaths, "seed", "path to seed JSON file (repeatable; files that don't exist are silently skipped)")
 	signingKey := flag.String("signing-key", envOr("MOCK_WORKOS_SIGNING_KEY", ""), "JWT signing key")
 	flag.Parse()
 
 	s := store.New()
 	issuer := mockjwt.NewIssuer(*signingKey)
 
-	if *seedPath != "" {
-		if err := seed.Load(*seedPath, s); err != nil {
-			log.Fatalf("failed to load seed: %v", err)
+	for _, path := range seedPaths {
+		if err := seed.LoadIfExists(path, s); err != nil {
+			log.Fatalf("failed to load seed %s: %v", path, err)
 		}
-		log.Printf("loaded seed from %s", *seedPath)
+		log.Printf("loaded seed from %s", path)
 	}
 
 	h := handler.New(s, issuer)
